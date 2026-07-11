@@ -56,51 +56,6 @@ ai-resume-analyzer/
 │   └── package.json
 └── README.md
 ```
-
----
-
-## Setup & Running Locally
-
-Follow these quick steps to get the application up and running on your system:
-
-### Prerequisites
-- Node.js installed (v18+ recommended)
-- MongoDB Atlas cluster URL
-- Google Gemini API Key
-
-### 1. Configure the Backend
-Navigate to the `backend` folder, install dependencies, and create the `.env` file:
-```bash
-cd backend
-npm install
-```
-
-Create a `.env` file in the `backend/` directory:
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_signing_secret
-GEMINI_API_KEY=your_google_gemini_api_key
-frontend_url=http://localhost:5173
-```
-
-Run the backend server:
-```bash
-npm start
-```
-The server will boot and connect to MongoDB Atlas, listening on `http://localhost:5000`.
-
-### 2. Configure the Frontend
-In another terminal, navigate to the `frontend` folder, install dependencies, and run Vite:
-```bash
-cd frontend
-npm install --legacy-peer-deps
-npm run dev
-```
-The client will launch and serve on `http://localhost:5173`.
-
----
-
 ## API Endpoints
 
 ### Auth Routings (`/api/auth`)
