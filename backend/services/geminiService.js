@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * Analyzes resume text using the Gemini API.
+ * Analyzes resume text using the Gemini API with automatic model fallback.
  * @param {string} resumeText - Raw text extracted from the PDF.
  * @returns {Promise<object>} - JSON object containing scores and details.
  */
@@ -13,14 +13,6 @@ export const analyzeResumeText = async (resumeText) => {
 
   // Initialize Gemini SDK
   const genAI = new GoogleGenerativeAI(apiKey);
-  
-  // Use gemini-3.5-flash which is supported by the API key
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-3.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-    },
-  });
 
   const prompt = `
     Analyze the following resume text and provide a structured, professional assessment.
@@ -57,44 +49,70 @@ export const analyzeResumeText = async (resumeText) => {
     ${resumeText}
   `;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const jsonText = response.text().trim();
+  // Fallback models if primary is overloaded or busy
+  const modelsToTry = [
+    'gemini-3.5-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-flash-latest',
+    'gemini-2.5-flash-lite'
+  ];
 
-    // Parse clean JSON output
-    let parsedData;
+  let lastError = null;
+
+  for (const modelName of modelsToTry) {
     try {
-      parsedData = JSON.parse(jsonText);
-    } catch (parseError) {
-      // Fallback clean-up if markdown block markers were returned in spite of responseMimeType
-      const regex = /^\s*```(?:json)?([\s\S]+?)```\s*$/;
-      const match = jsonText.match(regex);
-      if (match) {
-        parsedData = JSON.parse(match[1].trim());
-      } else {
-        throw new Error('Could not parse Gemini response as JSON: ' + jsonText);
+      console.log(`Attempting Gemini analysis with model: ${modelName}`);
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const jsonText = response.text().trim();
+
+      // Parse clean JSON output
+      let parsedData;
+      try {
+        parsedData = JSON.parse(jsonText);
+      } catch (parseError) {
+        // Fallback clean-up if markdown block markers were returned in spite of responseMimeType
+        const regex = /^\s*```(?:json)?([\s\S]+?)```\s*$/;
+        const match = jsonText.match(regex);
+        if (match) {
+          parsedData = JSON.parse(match[1].trim());
+        } else {
+          throw new Error('Could not parse Gemini response as JSON: ' + jsonText);
+        }
       }
+
+      // Double-check keys exist to prevent frontend crash
+      const defaultData = {
+        resumeScore: 70,
+        atsScore: 70,
+        grammarScore: 70,
+        summary: '',
+        strengths: [],
+        weaknesses: [],
+        skillsFound: [],
+        missingSkills: [],
+        recommendedJobs: [],
+        improvements: [],
+        keywords: [],
+      };
+
+      console.log(`SUCCESS: Completed resume analysis using model: ${modelName}`);
+      return { ...defaultData, ...parsedData };
+    } catch (error) {
+      console.warn(`WARNING: Model ${modelName} failed or unavailable:`, error.message);
+      lastError = error;
+      // Continue loop to try next model
     }
-
-    // Double-check keys exist to prevent frontend crash
-    const defaultData = {
-      resumeScore: 70,
-      atsScore: 70,
-      grammarScore: 70,
-      summary: '',
-      strengths: [],
-      weaknesses: [],
-      skillsFound: [],
-      missingSkills: [],
-      recommendedJobs: [],
-      improvements: [],
-      keywords: [],
-    };
-
-    return { ...defaultData, ...parsedData };
-  } catch (error) {
-    console.error('Gemini Analysis API Error:', error);
-    throw new Error('AI analysis failed: ' + error.message);
   }
+
+  // If all models failed
+  console.error('ERROR: All available Gemini models failed.');
+  throw new Error('AI analysis failed (all models busy or unavailable): ' + lastError.message);
 };
