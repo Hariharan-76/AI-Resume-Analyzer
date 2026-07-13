@@ -1,7 +1,7 @@
 import api from './api';
 
 export const register = async (name, email, password) => {
-  const response = await api.post('/auth/register', { name, email, password });
+  const response = await api.post('auth/register', { name, email, password });
   if (response.data.token) {
     localStorage.setItem('token', response.data.token);
     localStorage.setItem('user', JSON.stringify({
@@ -15,7 +15,7 @@ export const register = async (name, email, password) => {
 };
 
 export const login = async (email, password) => {
-  const response = await api.post('/auth/login', { email, password });
+  const response = await api.post('auth/login', { email, password });
   if (response.data.token) {
     localStorage.setItem('token', response.data.token);
     localStorage.setItem('user', JSON.stringify({
