@@ -52,9 +52,10 @@ export const analyzeResumeText = async (resumeText) => {
   // Fallback models if primary is overloaded or busy
   const modelsToTry = [
     'gemini-3.5-flash',
-    'gemini-2.0-flash-lite',
     'gemini-flash-latest',
-    'gemini-2.5-flash-lite'
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3-flash-preview'
   ];
 
   let lastError = null;
